@@ -1,0 +1,182 @@
+package com.rtm516.mcxboxbroadcast.core.configs;
+
+import com.rtm516.mcxboxbroadcast.core.Constants;
+import org.spongepowered.configurate.interfaces.meta.defaults.DefaultBoolean;
+import org.spongepowered.configurate.interfaces.meta.defaults.DefaultNumeric;
+import org.spongepowered.configurate.interfaces.meta.defaults.DefaultString;
+import org.spongepowered.configurate.interfaces.meta.range.NumericRange;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
+
+@ConfigSerializable
+public interface CoreConfig {
+    @Comment("Core session settings")
+    SessionConfig session();
+
+    @Comment("Friend list sync settings")
+    FriendSyncConfig friendSync();
+
+    @Comment("Notification settings (e.g., Slack/Discord webhook)")
+    NotificationConfig notifications();
+
+    @Comment("Enable debug logging")
+    @ExcludePlatform(platforms = {"Extension"})
+    @DefaultBoolean(false)
+    boolean debugMode();
+
+    @Comment("Suppresses \"Updated session!\" log into debug")
+    @ExcludePlatform(platforms = {"Extension"})
+    @DefaultBoolean(false)
+    boolean suppressSessionUpdateMessage();
+
+    @Comment("Do not change!")
+    @SuppressWarnings("unused")
+    default int configVersion() {
+        return Constants.CONFIG_VERSION;
+    }
+
+    @ConfigSerializable
+    interface SessionConfig {
+        @Comment("""
+            The address of the server to relay joins to
+            auto uses the address Geyser is bound to, or 127.0.0.1 for standalone""")
+        @DefaultString("auto")
+        String remoteAddress();
+
+        @Comment("""
+            The port of the server to relay joins to
+            auto uses Geyser's Bedrock port, or 19132 for standalone""")
+        @DefaultString("auto")
+        String remotePort();
+
+        @Comment("""
+            The amount of time in seconds to update session information
+            Warning: This can be no lower than 20 due to Xbox rate limits""")
+        @DefaultNumeric(30)
+        @NumericRange(from = 20, to = Integer.MAX_VALUE)
+        int updateInterval();
+
+        @Comment("Should we query the bedrock server to sync the session information")
+        @ExcludePlatform(platforms = {"Extension"})
+        @DefaultBoolean(true)
+        boolean queryServer();
+
+        @Comment("""
+            This uses checker.geysermc.org for querying if the native ping fails
+            This can be useful in the case of docker networks or routing problems causing the native ping to fail""")
+        @ExcludePlatform(platforms = {"Extension"})
+        @DefaultBoolean(false)
+        boolean webQueryFallback();
+
+        @Comment("Fallback to config values if all other server query methods fail")
+        @ExcludePlatform(platforms = {"Extension"})
+        @DefaultBoolean(false)
+        boolean configFallback();
+
+        @Comment("The data to broadcast over xbox live, this is the default if querying is enabled")
+        @ExcludePlatform(platforms = {"Extension"})
+        SessionInfo sessionInfo();
+
+        @Comment("""
+            When the session fills up a new one is created and the old one is closed
+            true: Players in the old session lose the friends of friends tag, so their friends can't see the server
+            false: Players in the old session keep the friends of friends tag, but their friends get an error when trying to join""")
+        @DefaultBoolean(true)
+        boolean hideOldSessions();
+
+        @ConfigSerializable
+        interface SessionInfo {
+            @Comment("The host name to broadcast")
+            @DefaultString("Geyser Test Server")
+            String hostName();
+
+            @Comment("The world name to broadcast")
+            @DefaultString("GeyserMC Demo & Test Server")
+            String worldName();
+
+            @Comment("The game mode to broadcast (Survival, Creative, Adventure)")
+            default GameMode gameMode() {
+                return GameMode.Survival;
+            }
+            void gameMode(GameMode mode);
+
+            @Comment("The current number of players")
+            @DefaultNumeric(0)
+            int players();
+
+            @Comment("The maximum number of players")
+            @DefaultNumeric(20)
+            int maxPlayers();
+
+            enum GameMode {
+                Survival,
+                Creative,
+                Adventure
+            }
+        }
+    }
+
+    @ConfigSerializable
+    interface FriendSyncConfig {
+        @Comment("""
+            The amount of time in seconds to update session information
+            Warning: This can be no lower than 20 due to Xbox rate limits""")
+        @DefaultNumeric(60)
+        @NumericRange(from = 20, to = Integer.MAX_VALUE)
+        int updateInterval();
+
+        @Comment("Should we automatically accept friend requests")
+        @DefaultBoolean(true)
+        boolean autoFriend();
+
+        @Comment("Should we automatically send an invite when a friend is added")
+        @DefaultBoolean(true)
+        boolean initialInvite();
+
+        @Comment("Friend expiry settings")
+        ExpiryConfig expiry();
+
+        @ConfigSerializable
+        interface ExpiryConfig {
+            @Comment("Should we unfriend people that haven't joined the server in a while")
+            @DefaultBoolean(true)
+            boolean enabled();
+
+            @Comment("The amount of time in days before a friend is considered expired")
+            @DefaultNumeric(15)
+            @NumericRange(from = 1, to = Integer.MAX_VALUE)
+            int days();
+
+            @Comment("How often to check in seconds for expired friends")
+            @DefaultNumeric(1800)
+            @NumericRange(from = 1, to = Integer.MAX_VALUE)
+            int check();
+        }
+    }
+
+    @ConfigSerializable
+    interface NotificationConfig {
+        @Comment("Should we send a message to a slack webhook when the session is updated")
+        @DefaultBoolean(false)
+        boolean enabled();
+
+        @Comment("""
+            The webhook url to send the message to
+            If you are using discord add "/slack" to the end of the webhook url""")
+        @DefaultString("")
+        String webhookUrl();
+
+        @Comment("The message to send when the session is expired and needs to be updated")
+        @DefaultString("""
+            <!here> Xbox Session expired, sign in again to update it.
+            
+            Use the following link to sign in: %s
+            Enter the code: %s""")
+        String sessionExpiredMessage();
+
+        @Comment("The message to send when a friend has restrictions in place that prevent them from being friends with our account")
+        @DefaultString("""
+            %s (%s) has restrictions in place that prevent them from being friends with our account.""")
+        String friendRestrictionMessage();
+    }
+}

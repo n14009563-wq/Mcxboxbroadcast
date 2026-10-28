@@ -1,0 +1,5 @@
+# Copy this file next to MCXboxBroadcastStandalone.jar and rename it to:  version-override.properties
+# Use it when Minecraft updates and the packets we use did not change, so you do not have to wait for a new build.
+# Leave a line out (or the whole file away) to use the version built into the jar.
+version=1.26.60
+protocol=2225
